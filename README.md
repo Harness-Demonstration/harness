@@ -14,7 +14,7 @@ Shared parts of the agent harness for the repositories in Harness-Demonstration.
 1. `scripts/onboard-repo.sh Harness-Demonstration/<repo> <reviewer-login> "<verify command>" <path to a local clone>`
 2. The token owner sets the secret: `gh secret set AGENT_LOOP_TOKEN --env agent-loop --repo Harness-Demonstration/<repo>`. The token is a fine-grained token of the human reviewer (see docs/agent-loop.md).
 3. Enable the Copilot cloud agent for the repository, and open a pull request with the written `.github/workflows/agent-loop.yml` and a `.github/CODEOWNERS`.
-4. `scripts/apply-ruleset.sh Harness-Demonstration/<repo> <CI job> ...`, for example `build docs`. Every listed job must run on pull requests, or no pull request can merge.
+4. Turn on secret scanning with push protection and CodeQL default setup (repository Settings, Advanced Security), then `scripts/apply-ruleset.sh --code-scanning Harness-Demonstration/<repo> <CI job> ...`, for example `build docs dependency-review`. Every listed job must run on pull requests, or no pull request can merge.
 5. Check the wiring without spending Copilot credits: after the merge, run the workflow by hand with the number of any pull request that Copilot did not open. The log says `PR #<n> is not an open Copilot pull request`.
 
 ## Versions
