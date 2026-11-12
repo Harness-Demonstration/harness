@@ -8,8 +8,9 @@ name: Agent loop
 # repository at the same commit as this file (job.workflow_repository, job.workflow_sha), so a caller that
 # pins @v1 also gets the v1 script.
 #
-# AGENT_LOOP_TOKEN cannot be passed from the caller as an environment secret. Each job names the
-# agent-loop environment itself and reads the secret from that environment in the caller repository.
+# AGENT_LOOP_TOKEN lives in the caller's agent-loop environment. GitHub needs two things for a called
+# workflow to see it: the caller passes it by name (secrets: AGENT_LOOP_TOKEN: ...), and the job here names
+# the environment. Without the first, the secret is an empty string and GitHub shows no error.
 # The environment allows the main branch only (scripts/onboard-repo.sh sets this up).
 
 on:
@@ -43,12 +44,15 @@ on:
         description: Pull request number for a manual run; empty for event runs
         type: string
         default: ''
+    secrets:
+      AGENT_LOOP_TOKEN:
+        description: Fine-grained token of the human reviewer, stored in the caller's agent-loop environment
+        required: false  # the script stops with a FIX message when it is empty
 
 permissions:
   contents: read
 
-# GH_TOKEN is set on each step, not here: at the workflow level the secrets context of a called workflow
-# holds only secrets the caller passes, and environment secrets exist only inside a job that names the environment.
+# GH_TOKEN is set on the steps of the jobs that name the environment; only those jobs get its value.
 env:
   HUMAN_REVIEWER: ${{ inputs.human-reviewer }}
   VERIFY_COMMAND: ${{ inputs.verify-command }}

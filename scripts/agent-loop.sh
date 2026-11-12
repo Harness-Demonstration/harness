@@ -30,7 +30,7 @@ FIX_MARKER="agent-loop:fix"
 log() { echo "agent-loop: $*" >&2; }  # stderr, so it never mixes into a captured result
 
 if [ -z "${GH_TOKEN:-}" ]; then
-  echo "::error::GH_TOKEN is empty. FIX: set AGENT_LOOP_TOKEN in this repository's agent-loop environment, and pass it on the step, not at the workflow level."
+  echo "::error::GH_TOKEN is empty. FIX: set AGENT_LOOP_TOKEN in this repository's agent-loop environment and pass it by name in the caller workflow under secrets: (see templates/agent-loop-caller.yml)."
   exit 1
 fi
 
