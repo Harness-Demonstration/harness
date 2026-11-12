@@ -1,0 +1,4 @@
+agent-ready	1D76DB	Well-scoped; assigned to Copilot automatically
+model:strong	5319E7	Use the stronger, more expensive model for this agent task
+needs-human	D93F0B	A person owns this issue
+ready-for-human	0E8A16	Agent loop finished; a person reviews and merges

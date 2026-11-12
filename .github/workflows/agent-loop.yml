@@ -1,0 +1,94 @@
+name: Agent loop
+
+# Reusable workflow. A repository calls it from its own .github/workflows/agent-loop.yml
+# (template: templates/agent-loop-caller.yml). Flow and rules: docs/agent-loop.md.
+#
+# The caller decides the triggers; this workflow only runs jobs. The github context is the caller's, so
+# github.event and GITHUB_REPOSITORY describe the caller repository. The script is checked out from this
+# repository at the same commit as this file (job.workflow_repository, job.workflow_sha), so a caller that
+# pins @v1 also gets the v1 script.
+#
+# AGENT_LOOP_TOKEN cannot be passed from the caller as an environment secret. Each job names the
+# agent-loop environment itself and reads the secret from that environment in the caller repository.
+# The environment allows the main branch only (scripts/onboard-repo.sh sets this up).
+
+on:
+  workflow_call:
+    inputs:
+      human-reviewer:
+        description: GitHub login that gets the pull request when the loop is done
+        type: string
+        required: true
+      verify-command:
+        description: Command Copilot runs before it pushes a fix; empty means the checks in copilot-instructions.md
+        type: string
+        default: ''
+      agent-model:
+        description: Model for agent-ready issues and fix rounds
+        type: string
+        default: gpt-6.1-terra
+      strong-model:
+        description: Model for issues with the model:strong label
+        type: string
+        default: claude-sonnet-5.5
+      review-effort:
+        description: Copilot code review effort (LITE, BALANCED or THOROUGH)
+        type: string
+        default: LITE
+      max-fix-rounds:
+        description: Fix rounds (CI and review together) before the pull request goes to a human
+        type: string
+        default: '1'
+      pr:
+        description: Pull request number for a manual run; empty for event runs
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ secrets.AGENT_LOOP_TOKEN }}
+  HUMAN_REVIEWER: ${{ inputs.human-reviewer }}
+  VERIFY_COMMAND: ${{ inputs.verify-command }}
+  AGENT_MODEL: ${{ inputs.agent-model }}
+  STRONG_MODEL: ${{ inputs.strong-model }}
+  REVIEW_EFFORT: ${{ inputs.review-effort }}
+  MAX_FIX_ROUNDS: ${{ inputs.max-fix-rounds }}
+
+jobs:
+  assign:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    environment: agent-loop
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: harness
+      - env:
+          ISSUE: ${{ github.event.issue.number }}
+        run: harness/scripts/agent-loop.sh assign "$ISSUE"
+
+  reconcile:
+    if: github.event_name != 'issues'
+    runs-on: ubuntu-latest
+    environment: agent-loop
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: harness
+      - env:
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          echo "harness ${{ job.workflow_repository }}@${{ job.workflow_sha }} for $GITHUB_REPOSITORY"
+          if [ -n "$PR" ]; then
+            harness/scripts/agent-loop.sh reconcile "$PR"
+          else
+            harness/scripts/agent-loop.sh reconcile-branch "$BRANCH"
+          fi

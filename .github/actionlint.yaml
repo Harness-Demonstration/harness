@@ -1,0 +1,6 @@
+# actionlint does not know job.workflow_repository and job.workflow_sha yet; GitHub documents them in the
+# job context (docs.github.com/en/actions/reference/workflows-and-actions/contexts).
+paths:
+  .github/workflows/agent-loop.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined'
