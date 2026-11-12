@@ -1,0 +1,2 @@
+# The shared harness runs with AGENT_LOOP_TOKEN in every service; a person approves every change.
+*  @rsercano

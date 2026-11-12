@@ -37,3 +37,6 @@ else
   echo "AGENT_LOOP_TOKEN is missing. The token owner runs:"
   echo "  gh secret set AGENT_LOOP_TOKEN --env agent-loop --repo $repo"
 fi
+
+echo "Last step, after the caller workflow and .github/CODEOWNERS are merged:"
+echo "  scripts/apply-ruleset.sh $repo <CI job> ...   (for example: build docs)"

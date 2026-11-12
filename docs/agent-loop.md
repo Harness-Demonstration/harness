@@ -12,7 +12,7 @@ Implemented by the reusable workflow `.github/workflows/agent-loop.yml` and `scr
 6. **Fix.** If the review has comments, the loop starts a fix round. It writes a marker comment, then starts a Copilot session on the pull request branch through the agent tasks API with the model from step 2 and the review comments in the prompt. A plain `@copilot` comment always runs with the default model, so it is only the fallback when the API refuses. Then step 4 runs again.
 7. **Hand over.** The loop marks the pull request ready, adds `ready-for-human` and mentions `HUMAN_REVIEWER` when a review has no comments and CI is green, or when `MAX_FIX_ROUNDS` fix rounds (CI and review fixes together) are used up. `MAX_FIX_ROUNDS` comes from the caller repository's variable `AGENT_MAX_FIX_ROUNDS`, default 1.
 
-The human then checks the diff against the acceptance criteria and merges, or removes `ready-for-human` and asks `@copilot` for changes, which restarts the loop at step 4. The loop never merges.
+The human then checks the diff against the acceptance criteria, approves and merges (the default-branch ruleset requires one approval, a code owner's for paths in `.github/CODEOWNERS`, and a new approval after any later push), or removes `ready-for-human` and asks `@copilot` for changes, which restarts the loop at step 4. The loop never merges.
 
 ## Rules
 - Each run looks at the pull request's current state and takes at most one step, so duplicate events are harmless.
