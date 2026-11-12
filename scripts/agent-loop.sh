@@ -29,6 +29,11 @@ FIX_MARKER="agent-loop:fix"
 
 log() { echo "agent-loop: $*" >&2; }  # stderr, so it never mixes into a captured result
 
+if [ -z "${GH_TOKEN:-}" ]; then
+  echo "::error::GH_TOKEN is empty. FIX: set AGENT_LOOP_TOKEN in this repository's agent-loop environment, and pass it on the step, not at the workflow level."
+  exit 1
+fi
+
 # The model for an issue or a pull request: STRONG_MODEL when the issue (or an issue the pull request
 # closes) has the model:strong label, otherwise the cheaper AGENT_MODEL.
 model_for_labels() {
@@ -158,7 +163,7 @@ reconcile() {
   local pr="$1" branch agent_runs finished reviews rounds fixes last_at last_id comments draft result sha ci prompt
   info=$(gh_retry api "repos/$REPO/pulls/$pr")
   if [ "$(jq -r .user.login <<<"$info")" != Copilot ] || [ "$(jq -r .state <<<"$info")" != open ]; then
-    log "PR #$pr is not an open Copilot pull request"; return
+    log "PR #$pr is not an open Copilot pull request (author $(jq -r .user.login <<<"$info"), state $(jq -r .state <<<"$info"))"; return
   fi
   if jq -e --arg l "$HANDOFF_LABEL" '.labels | map(.name) | index($l)' <<<"$info" >/dev/null; then
     log "PR #$pr is already with a human"; return
@@ -240,8 +245,12 @@ $(jq -r '.[] | "- \(.path):\(.line // .original_line // "?"): \(.body | .[0:1500
 reconcile_with_retry() {
   local attempt rc
   for attempt in 1 2 3 4 5 6; do
-    rc=0
-    reconcile "$1" || rc=$?
+    # A subshell outside any || or && list, so set -e stays on and a failed API call stops the step
+    # instead of being read as an empty answer.
+    set +e
+    (set -e; reconcile "$1")
+    rc=$?
+    set -e
     [ "$rc" -eq 3 ] || return "$rc"
     [ "$attempt" -lt 6 ] && sleep 10
   done

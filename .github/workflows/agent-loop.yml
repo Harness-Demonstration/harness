@@ -47,8 +47,9 @@ on:
 permissions:
   contents: read
 
+# GH_TOKEN is set on each step, not here: at the workflow level the secrets context of a called workflow
+# holds only secrets the caller passes, and environment secrets exist only inside a job that names the environment.
 env:
-  GH_TOKEN: ${{ secrets.AGENT_LOOP_TOKEN }}
   HUMAN_REVIEWER: ${{ inputs.human-reviewer }}
   VERIFY_COMMAND: ${{ inputs.verify-command }}
   AGENT_MODEL: ${{ inputs.agent-model }}
@@ -68,6 +69,7 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: harness
       - env:
+          GH_TOKEN: ${{ secrets.AGENT_LOOP_TOKEN }}
           ISSUE: ${{ github.event.issue.number }}
         run: harness/scripts/agent-loop.sh assign "$ISSUE"
 
@@ -83,6 +85,7 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: harness
       - env:
+          GH_TOKEN: ${{ secrets.AGENT_LOOP_TOKEN }}
           PR: ${{ github.event.pull_request.number || inputs.pr }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
