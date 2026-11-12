@@ -3,7 +3,9 @@
 #   scripts/onboard-repo.sh <owner/repo> <human-reviewer-login> "<verify command>"
 # 1. Creates or updates the labels in labels.tsv.
 # 2. Creates the agent-loop environment and allows the main branch only.
-# 3. Writes .github/workflows/agent-loop.yml into a local clone when run from one (optional, see below).
+# 3. Turns on secret scanning with push protection, Dependabot alerts (which needs the dependency graph that
+#    dependency-review reads) and CodeQL default setup.
+# 4. Writes .github/workflows/agent-loop.yml into a local clone when run from one (optional, see below).
 # It never touches AGENT_LOOP_TOKEN: the person who owns the token sets it (command printed at the end).
 set -euo pipefail
 repo="${1:?usage: $0 <owner/repo> <human-reviewer-login> \"<verify command>\"}"
@@ -23,6 +25,13 @@ if ! gh api "repos/$repo/environments/agent-loop/deployment-branch-policies" --j
 fi
 echo "agent-loop environment: main branch only"
 
+gh api -X PATCH "repos/$repo" --input - >/dev/null <<'JSON'
+{"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}
+JSON
+gh api -X PUT "repos/$repo/vulnerability-alerts" >/dev/null
+gh api -X PATCH "repos/$repo/code-scanning/default-setup" -f state=configured -f query_suite=default >/dev/null
+echo "secret scanning with push protection, Dependabot alerts and CodeQL default setup: on"
+
 # With a fourth argument (path to a local clone), write the caller workflow there for a pull request.
 if [ -n "${4:-}" ]; then
   mkdir -p "$4/.github/workflows"
@@ -39,4 +48,4 @@ else
 fi
 
 echo "Last step, after the caller workflow and .github/CODEOWNERS are merged:"
-echo "  scripts/apply-ruleset.sh $repo <CI job> ...   (for example: build docs)"
+echo "  scripts/apply-ruleset.sh --code-scanning $repo <CI job> ...   (for example: build docs dependency-review)"
