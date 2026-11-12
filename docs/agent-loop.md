@@ -19,7 +19,7 @@ The human then checks the diff against the acceptance criteria, approves and mer
 - GitHub API answers that mean "try again later" (HTTP 429, 5xx, GraphQL `SERVICE_UNAVAILABLE`) are retried up to four times with a growing delay.
 - The loop stops for good once `ready-for-human` is on the pull request. Remove the label and run the workflow by hand to restart it.
 - The workflow only uses triggers that run its definition from the default branch, never `pull_request_review` or `pull_request`, and never checks out pull request code. A pull request cannot change what runs with `AGENT_LOOP_TOKEN`.
-- The reusable workflow names the `agent-loop` environment on each job, because a caller cannot pass an environment secret. The secret is read from the caller repository's environment.
+- The reusable workflow names the `agent-loop` environment on each job, and the caller passes `AGENT_LOOP_TOKEN` by name. GitHub needs both: without the caller's line the secret is an empty string and the run shows no error. The value comes from the caller repository's environment, so only jobs on `main` receive it.
 - `AGENT_LOOP_TOKEN` is stored only in the `agent-loop` environment, whose deployment branch rule allows `main` alone. Because of that lock, "Require approval for workflow runs" for Copilot can be off.
 - `AGENT_LOOP_TOKEN` is a fine-grained token of the human reviewer. Copilot only acts on `@copilot` comments from people with write access, and reviews requested with it count against that person's Copilot plan.
 
@@ -27,7 +27,7 @@ The human then checks the diff against the acceptance criteria, approves and mer
 Measured on 2026-11-11 (sim-service PR #34) and priced with GitHub's per-token rates: a Claude Sonnet 5.5 writing session about $0.45, a Balanced review about $0.90, a Lite review about $0.25 (GitHub's estimate). Reviews were 60% of the cost. The defaults (GPT-6.1 Terra at half Sonnet's price, Lite reviews, one fix round) target about $0.50 to $0.80 per issue. Copilot Pro includes 1,500 AI credits ($15) a month.
 
 ## Sources
-- GitHub Docs, "Reuse workflows" and "Contexts": the `github` context of a called workflow is the caller's, environment secrets cannot be passed through `workflow_call`, and `job.workflow_repository` and `job.workflow_sha` name the called workflow's own repository and commit.
+- GitHub Docs, "Reuse workflows" and "Contexts": the `github` context of a called workflow is the caller's, a caller must pass an environment secret by name for a called workflow to see it, and `job.workflow_repository` and `job.workflow_sha` name the called workflow's own repository and commit.
 - GitHub Docs, "Creating a default community health file": issue templates in the public `.github` repository are used by every repository that has no `.github/ISSUE_TEMPLATE` of its own.
 - OpenAI, "Harness engineering": agents review their own changes and "iterate in a loop until all agent reviewers are satisfied"; humans are involved when judgment is required.
 - GitHub Docs: assigning issues to Copilot through the API (user token, `agentAssignment.model`), `requestCopilotCodeReview`, and the advice that production-critical, security-sensitive and ambiguous tasks are better done by developers.
